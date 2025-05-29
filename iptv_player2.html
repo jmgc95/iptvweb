@@ -9,11 +9,17 @@
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
   />
   <style>
+    :root {
+      --theme-color: #FF0A355B; /* original hex with alpha */
+      --theme-color-rgba: rgba(10, 53, 91, 1); /* solid */
+      --theme-color-hover: rgba(10, 53, 91, 0.8); /* hover effect */
+    }
+
     body {
       margin: 0;
       font-family: sans-serif;
-      background: #000000;
-      color: #333;
+      background: var(--theme-color-rgba);
+      color: #eee;
       overflow-x: hidden;
       display: flex;
       flex-direction: column;
@@ -21,7 +27,7 @@
     }
 
     .toolbar {
-      background-color: #FF36454F;
+      background-color: var(--theme-color-rgba);
       color: white;
       height: 56px;
       font-size: 20px;
@@ -33,7 +39,7 @@
       left: 0;
       width: 100%;
       z-index: 4;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
     .toolbar button {
@@ -45,43 +51,43 @@
       margin-right: 16px;
     }
 
-#drawer {
-  height: 100%;
-  width: 250px;
-  position: fixed;
-  top: 0;
-  left: -250px;
-  background-color: #121212; /* dark background */
-  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.7); /* stronger shadow for dark bg */
-  overflow-x: hidden;
-  transition: 0.3s;
-  z-index: 3;
-  display: flex;
-  flex-direction: column;
-  padding-top: 56px;
-}
+    #drawer {
+      height: 100%;
+      width: 250px;
+      position: fixed;
+      top: 0;
+      left: -250px;
+      background-color: var(--theme-color-rgba);
+      box-shadow: 2px 0 5px rgba(0, 0, 0, 0.7);
+      overflow-x: hidden;
+      transition: 0.3s;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      padding-top: 56px;
+    }
 
-#drawerHeader {
-  padding: 16px;
-  background-color: #1f1f1f; /* dark header background */
-  font-size: 20px;
-  font-weight: bold;
-  color: #fff; /* white text */
-  text-align: left;
-  border-bottom: 1px solid #333;
-}
+    #drawerHeader {
+      padding: 16px;
+      background-color: rgba(10, 53, 91, 0.95);
+      font-size: 20px;
+      font-weight: bold;
+      color: #fff;
+      text-align: left;
+      border-bottom: 1px solid #333;
+    }
 
-#drawer .channel {
-  padding: 12px 20px;
-  font-size: 16px;
-  color: #fff; /* white text */
-  cursor: pointer;
-  border-bottom: 1px solid #333;
-}
+    #drawer .channel {
+      padding: 12px 20px;
+      font-size: 16px;
+      color: #fff;
+      cursor: pointer;
+      border-bottom: 1px solid #333;
+    }
 
-#drawer .channel:hover {
-  background-color: #333; /* dark hover effect */
-}
+    #drawer .channel:hover {
+      background-color: var(--theme-color-hover);
+    }
 
     #overlay {
       position: fixed;
@@ -110,7 +116,7 @@
     }
 
     footer {
-      background-color: #FF36454F;
+      background-color: var(--theme-color-rgba);
       color: white;
       text-align: center;
       height: 56px;
@@ -283,7 +289,6 @@
       shakaReady = true;
     }
 
-    // Helper to wait until Shaka is ready
     function waitForShakaReady(fn) {
       if (shakaReady) {
         fn();
