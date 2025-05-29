@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>IPTV Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/shaka-player@4.3.5/dist/shaka-player.compiled.js"></script>
+  <link
+    rel="stylesheet"
+    href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+  />
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #000000;
+      color: #333;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .toolbar {
+      background-color: #007bff;
+      color: white;
+      height: 56px;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      padding: 0 16px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 4;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .toolbar button {
+      font-size: 20px;
+      background: none;
+      border: none;
+      color: white;
+      cursor: pointer;
+      margin-right: 16px;
+    }
+
+    #drawer {
+      height: 100%;
+      width: 250px;
+      position: fixed;
+      top: 0;
+      left: -250px;
+      background-color: #fff;
+      box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+      overflow-x: hidden;
+      transition: 0.3s;
+      z-index: 3;
+      display: flex;
+      flex-direction: column;
+      padding-top: 56px;
+    }
+
+    #drawerHeader {
+      padding: 16px;
+      background-color: #eee;
+      font-size: 20px;
+      font-weight: bold;
+      color: #333;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+
+    #drawer .channel {
+      padding: 12px 20px;
+      font-size: 16px;
+      color: #333;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+    }
+
+    #drawer .channel:hover {
+      background-color: #f0f0f0;
+    }
+
+    #overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100%;
+      width: 100%;
+      background-color: rgba(0, 0, 0, 0.3);
+      z-index: 2;
+      display: none;
+    }
+
+    video {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      max-height: 100vh;
+      background-color: black;
+      object-fit: cover;
+    }
+
+    #main {
+      padding: 0px;
+      padding-top: 56px;
+      z-index: 1;
+      flex: 1;
+    }
+
+    footer {
+      background-color: #007bff;
+      color: white;
+      text-align: center;
+      height: 56px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 16px;
+      padding: 0;
+    }
+
+    .social-icons a {
+      color: white;
+      margin: 0 4px;
+      font-size: 18px;
+      text-decoration: none;
+      transition: transform 0.2s;
+    }
+
+    .social-icons a:hover {
+      transform: scale(1.2);
+      color: #ffdd57;
+    }
+
+    /* Fullscreen styles */
+    :fullscreen body > *:not(video),
+    :-webkit-full-screen body > *:not(video) {
+      display: none !important;
+    }
+
+    video:fullscreen,
+    video:-webkit-full-screen {
+      width: 100vw !important;
+      height: 100vh !important;
+      object-fit: contain !important;
+      background-color: black;
+    }
+  </style>
+</head>
+<body>
+  <!-- Overlay -->
+  <div id="overlay" onclick="closeDrawer()"></div>
+
+  <!-- Navigation Drawer -->
+  <div id="drawer">
+    <div id="drawerHeader">TV CHANNELS</div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="toolbar">
+    <button id="menuToggle" onclick="toggleDrawer()">
+      <span id="menuIcon">☰</span>
+    </button>
+    IPTV Player
+  </div>
+
+  <!-- Main Content -->
+  <div id="main">
+    <video id="video" controls autoplay></video>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="social-icons">
+      <a href="#" title="Facebook"><i class="fab fa-facebook-f"></i></a>
+      <a href="#" title="Twitter"><i class="fab fa-twitter"></i></a>
+      <a href="#" title="Instagram"><i class="fab fa-instagram"></i></a>
+      <a href="#" title="YouTube"><i class="fab fa-youtube"></i></a>
+    </div>
+    <p>&copy; 2025 IPTV.PLAY - All rights reserved.</p>
+  </footer>
+
+  <script>
+    const channels = [
+      {
+        name: "HBO",
+        url: "https://qp-pldt-live-grp-03-prod.akamaized.net/out/u/cg_hbohd.mpd",
+        clearKey: {
+          d47ebabf7a21430b83a8c4b82d9ef6b1:
+            "54c213b2b5f885f1e0290ee4131d425b",
+        },
+      },
+      {
+        name: "HBO Family",
+        url: "https://qp-pldt-live-grp-03-prod.akamaized.net/out/u/cg_hbofam.mpd",
+        clearKey: {
+          "872910c843294319800d85f9a0940607":
+            "f79fd895b79c590708cf5e8b5c6263be",
+        },
+      },
+      {
+        name: "HBO Signature",
+        url: "https://qp-pldt-live-grp-01-prod.akamaized.net/out/u/cg_hbosign.mpd",
+        clearKey: {
+          a06ca6c275744151895762e0346380f5:
+            "559da1b63eec77b5a942018f14d3f56f",
+        },
+      },
+      {
+        name: "HBO Hits",
+        url: "https://qp-pldt-live-grp-09-prod.akamaized.net/out/u/cg_hbohits.mpd",
+        clearKey: {
+          b04ae8017b5b4601a5a0c9060f6d5b7d:
+            "a8795f3bdb8a4778b7e888ee484cc7a1",
+        },
+      },
+      {
+        name: "Cinemax",
+        url: "https://qp-pldt-live-grp-01-prod.akamaized.net/out/u/cg_cinemax.mpd",
+        clearKey: {
+          b207c44332844523a3a3b0469e5652d7:
+            "fe71aea346db08f8c6fbf0592209f955",
+        },
+      },
+      {
+        name: "Hits",
+        url: "https://qp-pldt-live-grp-04-prod.akamaized.net/out/u/hits_hd1.mpd",
+        clearKey: {
+          dac605bc197e442c93f4f08595a95100:
+            "975e27ffc1b7949721ee3ccb4b7fd3e5",
+        },
+      },
+      {
+        name: "AXN",
+        url: "https://qp-pldt-live-grp-06-prod.akamaized.net/out/u/cg_axn_sd.mpd",
+        clearKey: {
+          fd5d928f5d974ca4983f6e9295dfe410:
+            "3aaa001ddc142fedbb9d5557be43792f",
+        },
+      },
+      {
+        name: "Warner TV",
+        url: "https://qp-pldt-live-grp-11-prod.akamaized.net/out/u/dr_warnertvhd.mpd",
+        clearKey: {
+          "4503cf86bca3494ab95a77ed913619a0":
+            "afc9c8f627fb3fb255dee8e3b0fe1d71",
+        },
+      },
+    ];
+
+    const drawer = document.getElementById("drawer");
+    const overlay = document.getElementById("overlay");
+    const video = document.getElementById("video");
+    const menuIcon = document.getElementById("menuIcon");
+
+    let player;
+    let shakaReady = false;
+
+    function toggleDrawer() {
+      const isOpen = drawer.style.left === "0px";
+      drawer.style.left = isOpen ? "-250px" : "0px";
+      overlay.style.display = isOpen ? "none" : "block";
+      menuIcon.textContent = isOpen ? "☰" : "←";
+      document.body.style.overflow = isOpen ? "auto" : "hidden";
+    }
+
+    function closeDrawer() {
+      drawer.style.left = "-250px";
+      overlay.style.display = "none";
+      menuIcon.textContent = "☰";
+      document.body.style.overflow = "auto";
+    }
+
+    async function initShaka() {
+      shaka.polyfill.installAll();
+      if (!shaka.Player.isBrowserSupported()) {
+        alert("Browser not supported!");
+        return;
+      }
+      player = new shaka.Player(video);
+      shakaReady = true;
+    }
+
+    // Helper to wait until Shaka is ready
+    function waitForShakaReady(fn) {
+      if (shakaReady) {
+        fn();
+      } else {
+        setTimeout(() => waitForShakaReady(fn), 100);
+      }
+    }
+
+    async function loadChannel(channel) {
+      try {
+        await player.destroy();
+        player = new shaka.Player(video);
+        player.configure({ drm: { clearKeys: channel.clearKey } });
+        await player.load(channel.url);
+        console.log("Now playing:", channel.name);
+      } catch (error) {
+        console.error("Playback error for", channel.name, error);
+        alert("Failed to play " + channel.name);
+      }
+    }
+
+    function setupDrawer() {
+      channels.forEach((channel) => {
+        const item = document.createElement("div");
+        item.className = "channel";
+        item.textContent = channel.name;
+        item.onclick = () => {
+          loadChannel(channel);
+          closeDrawer();
+        };
+        drawer.appendChild(item);
+      });
+    }
+
+    initShaka().then(setupDrawer);
+  </script>
+</body>
+</html>
