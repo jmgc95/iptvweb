@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>IPTV Player</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.11.0/firebase-firestore-compat.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+<style>
+  body {
+    margin: 0;
+    font-family: sans-serif;
+    background: #e3f2fd; 
+    color: #000;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  header {
+    background: #2196f3; 
+    padding: 10px 20px;
+    font-size: 18px;
+    font-weight: bold;
+    border-bottom: 1px solid #2196f3;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .hamburger {
+    display: none;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .container {
+    flex: 1;
+    display: flex;
+    height: calc(100vh - 50px);
+  }
+  .sidebar {
+    width: 240px;
+    background: #2196f3;
+    overflow-y: auto;
+    padding: 10px 0;
+    border-right: 1px solid #2196f3;
+    transition: transform 0.3s ease;
+  }
+  .sidebar h3 {
+    margin: 0;
+    padding: 10px 15px;
+    font-size: 16px;
+    border-bottom: 1px solid #90caf9;
+    color: #feffff;
+  }
+  .channel {
+    padding: 12px 15px;
+    cursor: pointer;
+    background: #fff;
+    margin: 5px 10px;
+    border-radius: 6px;
+    text-align: left;
+    font-size: 14px;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+  }
+  .channel:hover {
+    background: #bbdefb;
+  }
+  .channel img {
+    width: 32px;
+    height: 32px;
+    margin-right: 10px;
+    object-fit: contain;
+    border-radius: 4px;
+  }
+  .video-area {
+    flex: 1;
+    background: black;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    background: black;
+  }
+
+  /* Scrollbar */
+  .sidebar::-webkit-scrollbar {
+    width: 12px; 
+  }
+  .sidebar::-webkit-scrollbar-track {
+    background: #d0e7ff;
+    border-radius: 0px;
+  }
+  .sidebar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #5298f3, #5298f3);
+    border: 1px solid #a6cfff;
+    border-radius: 0px;
+    box-shadow: inset 0 0 2px rgba(0, 0, 0, 0.15);
+  }
+  .sidebar::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #5298f3, #5298f3);
+  }
+  .sidebar::-webkit-scrollbar-button:single-button {
+    background-color: #b3d9ff;
+    display: block;
+    height: 12px;
+    background-size: 8px;
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+  .sidebar::-webkit-scrollbar-button:single-button:vertical:decrement {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><polygon points='4,0 0,4 8,4' fill='%232196f3'/></svg>");
+  }
+  .sidebar::-webkit-scrollbar-button:single-button:vertical:increment {
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'><polygon points='0,0 8,0 4,4' fill='%232196f3'/></svg>");
+  }
+
+  /* Mobile responsive */
+  @media (max-width: 768px) and (orientation: portrait) {
+    .sidebar {
+      position: fixed;
+      top: 50px;
+      left: 0;
+      height: calc(100% - 50px);
+      transform: translateX(-100%);
+      z-index: 1000;
+    }
+    .sidebar.show {
+      transform: translateX(0);
+    }
+    .hamburger {
+      display: block;
+    }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span>JMGC TV-Player</span>
+  <i class="fas fa-bars hamburger" id="hamburgerBtn"></i>
+</header>
+
+<div class="container">
+  <div class="sidebar" id="sidebar">
+    <h3>TV Channels</h3>
+    <div id="channelList"></div>
+  </div>
+  <div class="video-area">
+    <video id="video" controls autoplay></video>
+  </div>
+</div>
+
+<script>
+  // Firebase config
+  const firebaseConfig = {
+    apiKey: "AIzaSyBJAe0FhTwbwciO3Z25HBsAKJRfZT1Ytwc",
+    authDomain: "iptv-stream-project-b125c.firebaseapp.com",
+    projectId: "iptv-stream-project-b125c",
+    storageBucket: "iptv-stream-project-b125c.firebasestorage.app",
+    messagingSenderId: "20163934300",
+    appId: "1:20163934300:web:dc99cd1f0ef1b1d84c4e99",
+    measurementId: "G-X3P65GR5Y7"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+  const video = document.getElementById("video");
+  const channelList = document.getElementById("channelList");
+  const sidebar = document.getElementById("sidebar");
+  const hamburgerBtn = document.getElementById("hamburgerBtn");
+  let hls;
+
+  // Toggle sidebar for mobile
+  hamburgerBtn.addEventListener("click", () => {
+    sidebar.classList.toggle("show");
+  });
+
+  function loadChannel(channel) {
+    if (hls) hls.destroy();
+    if (Hls.isSupported()) {
+      hls = new Hls();
+      hls.loadSource(channel.url);
+      hls.attachMedia(video);
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+      video.src = channel.url;
+    }
+    // Close sidebar on mobile after selecting channel
+    if (window.innerWidth <= 768) {
+      sidebar.classList.remove("show");
+    }
+  }
+
+  function renderChannels(channels) {
+    channelList.innerHTML = "";
+    channels.forEach((channel, index) => {
+      const item = document.createElement("div");
+      item.className = "channel";
+      // Create image element for channel icon
+      const img = document.createElement("img");
+      img.src = channel.imageUrl || "https://via.placeholder.com/32"; // Fallback image if imageUrl is not provided
+      img.alt = `${channel.name} icon`;
+      item.appendChild(img);
+      // Create span for channel name
+      const nameSpan = document.createElement("span");
+      nameSpan.textContent = channel.name;
+      item.appendChild(nameSpan);
+      item.onclick = () => loadChannel(channel);
+      channelList.appendChild(item);
+      if (index === 0) loadChannel(channel); // Auto-play first channel
+    });
+  }
+
+  db.collection("channels").onSnapshot(snapshot => {
+    const channels = [];
+    snapshot.forEach(doc => channels.push(doc.data()));
+    renderChannels(channels);
+  });
+</script>
+
+</body>
+</html>
